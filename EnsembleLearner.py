@@ -2,10 +2,12 @@
 """
 
 import pandas as pd
+import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.neural_network import MLPClassifier
 from sklearn.base import clone
 
 class EnsembleLearner:
@@ -26,9 +28,10 @@ class EnsembleLearner:
         self.eval_size = eval_size
         self.ensemble_learner = ensemble_learner
         self.model_mapping = {
-            'knn': KNeighborsClassifier(n_neighbors=6),
+            'knn': KNeighborsClassifier(n_neighbors=int(np.sqrt(self.X.shape[0]))),
             'GaussianNB': GaussianNB(),
-            'DecisionTree': DecisionTreeClassifier(random_state=0)
+            'DecisionTree': DecisionTreeClassifier(random_state=0),
+            'MLP': MLPClassifier(max_iter=300, solver='adam', alpha=1e-5, hidden_layer_sizes=(int(self.X.shape[0]/2)))
         }
 
     def __train_test_split(self):
@@ -57,16 +60,19 @@ class EnsembleLearner:
                 print(f'Model {model} done training for Ensemble Learner')
         return pred_df
 
-    def train_ensemble_learner(self):
+    def train_ensemble_learner(self, return_training_predictions=False):
         """
         """
         ensemble_train_set = self.__run_inclass_predictions()
-        ensemble_train_X = ensemble_train_set.drop('truth', axis = 1)
+        ensemble_train_X = ensemble_train_set.drop('truth', axis=1)
         ensemble_train_X = pd.get_dummies(ensemble_train_X)
         self.ensemble_columns = ensemble_train_X.columns
         ensemble_train_y = ensemble_train_set['truth']
         ensemble_forecaster = self.__get_forecaster(model=self.ensemble_learner)
         self.ensemble_forecaster = ensemble_forecaster.fit(ensemble_train_X, ensemble_train_y)
+        if return_training_predictions:
+            training_predictions = self.ensemble_forecaster.predict(ensemble_train_X)
+            return(pd.concat([pd.DataFrame({'EL_pred': training_predictions}).reset_index(drop=True), ensemble_train_set.reset_index(drop=True)], axis=1))
 
     def run_insample_prediction(self):
         pass
@@ -84,4 +90,4 @@ class EnsembleLearner:
         col_list = list(set(self.ensemble_columns) - set(pred_dfd.columns))
         for col in col_list: pred_dfd[col] = 0
         final_predictions = self.ensemble_forecaster.predict(pred_dfd)
-        return pd.concat([pd.DataFrame({'EL_pred': final_predictions}), pred_df], axis = 1)
+        return pd.concat([pd.DataFrame({'EL_pred': final_predictions}), pred_df], axis=1)
