@@ -1,1 +1,3 @@
-# ensemble_learner
+# Ensemble Learner
+
+This repository introduces an ensemble learner class that will run predictions using various scikit learn models which are themselves handed to an ensemble method. The project resulted from an in-class activity conducted at the University of Technology Sydney (UTS). The Ensemble Learner class itself stands free and can be used as in the script. The notebook focuses on a real-life example where hotel cancellations are predicted using the ensemble learner.
