@@ -15,16 +15,26 @@ from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.base import clone
 
 class EnsembleLearner:
-    """EnsembleLearner
+    """EnsembleLearner description.
+
+    More Description
+
+    Args:
+        X (pd.DataFrame): tbd.
+        y (pd.Series): tbd.
+
+    Attributes:
+        X (pd.DataFrame): tbd.
+        y (pd.Series): tbd.
     """
     
     def __init__(
         self,
-        X,
-        y,
-        models,
-        eval_size = 0.3,
-        ensemble_learner = 'DecisionTree'
+        X: pd.DataFrame,
+        y: pd.DataFrame,
+        models: list,
+        eval_size: float = 0.3,
+        ensemble_learner: str = 'DecisionTree'
     ):
         self.X = X
         self.y = y
@@ -41,58 +51,145 @@ class EnsembleLearner:
             'LogisticRegression': LogisticRegression(),
             'XGBoost': GradientBoostingClassifier(n_estimators=1000, learning_rate=0.1, max_depth=15)
         }
+        self.ensemble_learner_model_mapping = {
+            'DecisionTree': DecisionTreeClassifier(random_state=0)
+        }
 
     def __train_test_split(self):
-        """
+        """Private method to split the given data in train- and test-set.
+
+        Returns:
+            X_train (pd.DataFrame): Training data.
+            X_test (pd.DataFrame): Test data.
+            y_train (pd.Series): Training labels.
+            y_test (pd.Series): Test labels.
         """
         return train_test_split(self.X, self.y, test_size=self.eval_size)
 
-    def __get_forecaster(self, model):
-        """
-        """
-        return clone(self.model_mapping[model])
-        
+    def __get_forecaster(
+        self,
+        model: str
+    ):
+        """Private method to return the scikit-learn model.
 
-    def __run_inclass_predictions(self, verbose=True):
+        Returns:
+            sklearn.model: The corresponding scikit-learn model.
         """
+        return self.model_mapping[model]
+
+    def __get_ensemble_forecaster(
+        self,
+        model: str
+    ):
+        """Private method to return the scikit-learn model.
+
+        Returns:
+            sklearn.model: The corresponding scikit-learn model.
+        """
+        return self.ensemble_learner_model_mapping[model]
+        
+    def __train_models(
+        self,
+        X,
+        y,
+        verbose = True,
+        msg = None
+    ):
+        """
+        """
+        for model in self.models:
+            forecaster = self.__get_forecaster(model=model)
+            forecaster.fit(X, y)
+            if verbose:
+                print(f'Model {model} done training {msg}')
+
+    def __predict_models(
+        self,
+        X,
+        y = None
+    ):
+        """
+        """
+        if y is not None:
+            pred_df = pd.DataFrame({'truth': y})
+        else:
+            pred_df = pd.DataFrame()
+        for model in self.models:
+            forecaster = self.__get_forecaster(model=model)
+            pred_df[model] = forecaster.predict(X)
+        return pred_df
+
+    def __run_inclass_predictions(
+        self,
+        verbose: bool = True
+    ):
+        """Trains the specified models and predicts on the test-set.
+        Splits the data specified in the class description first. Loops
+        through the specified models, trains them and predicts on the
+        test-set. All predictions are stored and returned.
+
+        Args:
+            verbose (bool): If true model training progress is printed.
+
+        Returns:
+            pred_df (pd.DataFrame): Dataframe that returns ground truth and 
+            predictions of all specified models.
         """
         if self.models == 'ALL':
             pass
         else:
             X_train, X_test, y_train, y_test = self.__train_test_split()
-            pred_df = pd.DataFrame({'truth': y_test})
-            for model in self.models:
-                forecaster = self.__get_forecaster(model=model)
-                forecaster.fit(X_train, y_train)
-                pred_df[model] = forecaster.predict(X_test)
-                if verbose:
-                    print(f'Model {model} done training for Ensemble Learner')
+            self.__train_models(X=X_train, y=y_train, verbose=verbose, msg='Ensemble Learner Training')
+            pred_df = self.__predict_models(X=X_test, y=y_test)
         return pred_df
 
-    def train_ensemble_learner(self, return_training_predictions=False, verbose=True):
-        """
+
+
+    def train_ensemble_learner(
+        self,
+        return_training_predictions: bool = False,
+        verbose: bool = True
+    ):
+        """Trains the ensemble learner on the model predictions.
+        Calls the function to train and predict the models. Takes the
+        predictions and ground truth and trains the specified
+        ensemble learner.
+
+        Args:
+            return_training_predictions (bool): If true returns the training
+            predictions of the ensemble learner along with the model
+            predictions on the training data.
+            verbose (bool): If true model training progress is printed.
+
+        Returns:
+            pd.DataFrame: If specified returns the training predictions
+            of the ensemble learner along with the model predictions.
         """
         ensemble_train_set = self.__run_inclass_predictions(verbose=verbose)
         ensemble_train_X = ensemble_train_set.drop('truth', axis=1)
         ensemble_train_X = pd.get_dummies(ensemble_train_X)
         self.ensemble_columns = ensemble_train_X.columns
         ensemble_train_y = ensemble_train_set['truth']
-        ensemble_forecaster = self.__get_forecaster(model=self.ensemble_learner)
+        ensemble_forecaster = self.__get_ensemble_forecaster(model=self.ensemble_learner)
         self.ensemble_forecaster = ensemble_forecaster.fit(ensemble_train_X, ensemble_train_y)
+        self.__train_models(X=self.X, y=self.y, verbose=verbose, msg='Final Model Training')
         if return_training_predictions:
             training_predictions = self.ensemble_forecaster.predict(ensemble_train_X)
             return(pd.concat([pd.DataFrame({'EL_pred': training_predictions}).reset_index(drop=True), ensemble_train_set.reset_index(drop=True)], axis=1))
 
-    def predict(self, X_final, verbose=True):
+    def predict(
+        self,
+        X: pd.DataFrame
+    ):
+        """Produces the final predictions of the ensemble learner.
+        Trains the models on the whole data and predicts on the unseen
+        data. Feeds these predictions to the ensemble learner trained
+        before to conclude the final predictions.
+
+        Args:
+            X_final (pd.DataFrame): Data
         """
-        """
-        pred_df = pd.DataFrame()
-        for model in self.models:
-            forecaster = self.__get_forecaster(model=model)
-            forecaster.fit(self.X, self.y)
-            pred_df[model] = forecaster.predict(X_final)
-            if verbose:
-                print(f'Model {model} done training for Final Predictions')
+        pred_df = self.__predict_models(X=X)
         pred_dfd = pd.get_dummies(pred_df)
         col_list = list(set(self.ensemble_columns) - set(pred_dfd.columns))
         for col in col_list: pred_dfd[col] = 0
