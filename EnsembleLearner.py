@@ -53,7 +53,7 @@ class EnsembleLearner:
         return clone(self.model_mapping[model])
         
 
-    def __run_inclass_predictions(self):
+    def __run_inclass_predictions(self, verbose=True):
         """
         """
         if self.models == 'ALL':
@@ -65,13 +65,14 @@ class EnsembleLearner:
                 forecaster = self.__get_forecaster(model=model)
                 forecaster.fit(X_train, y_train)
                 pred_df[model] = forecaster.predict(X_test)
-                print(f'Model {model} done training for Ensemble Learner')
+                if verbose:
+                    print(f'Model {model} done training for Ensemble Learner')
         return pred_df
 
-    def train_ensemble_learner(self, return_training_predictions=False):
+    def train_ensemble_learner(self, return_training_predictions=False, verbose=True):
         """
         """
-        ensemble_train_set = self.__run_inclass_predictions()
+        ensemble_train_set = self.__run_inclass_predictions(verbose=verbose)
         ensemble_train_X = ensemble_train_set.drop('truth', axis=1)
         ensemble_train_X = pd.get_dummies(ensemble_train_X)
         self.ensemble_columns = ensemble_train_X.columns
@@ -82,7 +83,7 @@ class EnsembleLearner:
             training_predictions = self.ensemble_forecaster.predict(ensemble_train_X)
             return(pd.concat([pd.DataFrame({'EL_pred': training_predictions}).reset_index(drop=True), ensemble_train_set.reset_index(drop=True)], axis=1))
 
-    def predict(self, X_final):
+    def predict(self, X_final, verbose=True):
         """
         """
         pred_df = pd.DataFrame()
@@ -90,7 +91,8 @@ class EnsembleLearner:
             forecaster = self.__get_forecaster(model=model)
             forecaster.fit(self.X, self.y)
             pred_df[model] = forecaster.predict(X_final)
-            print(f'Model {model} done training for Final Predictions')
+            if verbose:
+                print(f'Model {model} done training for Final Predictions')
         pred_dfd = pd.get_dummies(pred_df)
         col_list = list(set(self.ensemble_columns) - set(pred_dfd.columns))
         for col in col_list: pred_dfd[col] = 0
