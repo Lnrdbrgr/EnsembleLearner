@@ -8,6 +8,10 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neural_network import MLPClassifier
+from sklearn import svm
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.base import clone
 
 class EnsembleLearner:
@@ -31,7 +35,11 @@ class EnsembleLearner:
             'knn': KNeighborsClassifier(n_neighbors=int(np.sqrt(self.X.shape[0]))),
             'GaussianNB': GaussianNB(),
             'DecisionTree': DecisionTreeClassifier(random_state=0),
-            'MLP': MLPClassifier(max_iter=300, solver='adam', alpha=1e-5, hidden_layer_sizes=(int(self.X.shape[0]/2)))
+            'MLP': MLPClassifier(max_iter=300, solver='adam', alpha=1e-5, hidden_layer_sizes=(int(self.X.shape[0]/2))),
+            'SVM': svm.SVC(),
+            'RandomForest': RandomForestClassifier(max_depth=15, n_estimators=1000),
+            'LogisticRegression': LogisticRegression(),
+            'XGBoost': GradientBoostingClassifier(n_estimators=1000, learning_rate=0.1, max_depth=15)
         }
 
     def __train_test_split(self):
@@ -73,9 +81,6 @@ class EnsembleLearner:
         if return_training_predictions:
             training_predictions = self.ensemble_forecaster.predict(ensemble_train_X)
             return(pd.concat([pd.DataFrame({'EL_pred': training_predictions}).reset_index(drop=True), ensemble_train_set.reset_index(drop=True)], axis=1))
-
-    def run_insample_prediction(self):
-        pass
 
     def predict(self, X_final):
         """
