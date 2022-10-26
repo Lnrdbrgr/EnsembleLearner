@@ -67,14 +67,14 @@ class EnsembleLearner:
         self.eval_size = eval_size
         self.ensemble_learner = ensemble_learner
         self.model_mapping = {
-            'knn': KNeighborsClassifier(n_neighbors=int(np.sqrt(self.X.shape[0]))),
+            'knn': KNeighborsClassifier(n_neighbors=int(171)),
             'GaussianNB': GaussianNB(),
-            'DecisionTree': DecisionTreeClassifier(min_samples_split=4, min_samples_leaf=15),
-            'MLP': MLPClassifier(max_iter=300, solver='adam', alpha=1e-5, hidden_layer_sizes=(int(self.X.shape[0]/2))),
-            'SVM': svm.SVC(),
-            'RandomForest': RandomForestClassifier(max_depth=15, n_estimators=1500),
+            'DecisionTree': DecisionTreeClassifier(min_samples_leaf=1),
+            'MLP': MLPClassifier(max_iter=150, solver='adam', learning_rate_init=0.001, hidden_layer_sizes=(int(self.X.shape[0]/2))),
+            'SVM': svm.SVC(kernel='rbf'),
+            'RandomForest': RandomForestClassifier(min_samples_leaf=1, n_estimators=800),
             'LogisticRegression': LogisticRegression(),
-            'XGBoost': GradientBoostingClassifier(n_estimators=1500, learning_rate=0.1, max_depth=15)
+            'XGBoost': GradientBoostingClassifier(n_estimators=800, learning_rate=0.2, min_samples_leaf=15)
         }
         self.ensemble_learner_model_mapping = {
             'DecisionTree': DecisionTreeClassifier(random_state=0)
